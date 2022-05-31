@@ -29,8 +29,8 @@ dataset = DatasetDict({"train": train_hf_split, "valid":valid_hf_split})
 tokenizer = AutoTokenizer.from_pretrained(checkpoint, return_tensors="tf", src_lang="de", tgt_lang="ca")
 
 
-source_lang = "ca"
-target_lang = "de"
+source_lang = "de"
+target_lang = "ca"
 
 def preprocess_function(examples):
     inputs = [example[source_lang] for example in examples["translation"]]
