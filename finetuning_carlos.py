@@ -20,7 +20,7 @@ ds = load_dataset("csv", data_files="corpus_sm.csv")
 #load dataset in HuggingFace format
 dataset = {}
 train_hf_split = dataframe_to_hf(ds['train'][:200],'ca','de')
-valid_hf_split = dataframe_to_hf(ds['train'][200:50],'ca','de')
+valid_hf_split = dataframe_to_hf(ds['train'][200:250],'ca','de')
 #print(test_hf_split)
 train_hf_split = Dataset.from_dict(train_hf_split)
 valid_hf_split = Dataset.from_dict(valid_hf_split)
