@@ -19,15 +19,14 @@ ds = load_dataset("csv", data_files="corpus_sm.csv")
 
 #load dataset in HuggingFace format
 dataset = {}
-train_hf_split = dataframe_to_hf(ds['train'][:200],'ca','de')
-valid_hf_split = dataframe_to_hf(ds['train'][200:250],'ca','de')
+train_hf_split = dataframe_to_hf(ds['train'][:200],'de','ca')
+valid_hf_split = dataframe_to_hf(ds['train'][200:250],'de','ca')
 #print(test_hf_split)
 train_hf_split = Dataset.from_dict(train_hf_split)
 valid_hf_split = Dataset.from_dict(valid_hf_split)
 dataset = DatasetDict({"train": train_hf_split, "valid":valid_hf_split})
 
 tokenizer = AutoTokenizer.from_pretrained(checkpoint, return_tensors="tf", src_lang="de", tgt_lang="ca")
-
 
 source_lang = "de"
 target_lang = "ca"
@@ -45,7 +44,7 @@ def preprocess_function(examples):
 
 tokenized_dataset = dataset.map(preprocess_function, batched=True)
 
-data_collator = DataCollatorForSeq2Seq(tokenizer, model=model)
+data_collator = DataCollatorForSeq2Seq(tokenizer, model=model, padding=True)
 
 training_args = Seq2SeqTrainingArguments(
     output_dir="./results",
@@ -54,9 +53,11 @@ training_args = Seq2SeqTrainingArguments(
     per_device_train_batch_size=16,
     per_device_eval_batch_size=16,
     weight_decay=0.01,
-    save_total_limit=3,
+    save_total_limit=1,
     num_train_epochs=1,
     fp16=False,
+    save_strategy="epoch",
+    logging_strategy="epoch",
 )
 
 trainer = Seq2SeqTrainer(
