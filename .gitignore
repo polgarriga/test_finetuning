@@ -1,3 +1,7 @@
 m2m_adapters/model/*
 m2m_adapters/data/*
+.idea/
+data/
+results/
+runs/
 
