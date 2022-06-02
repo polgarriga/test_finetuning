@@ -1,4 +1,4 @@
-from modeling_m2m_100 import M2M100Model
+from modeling_m2m_100_parallel import M2M100Model
 from configuration_m2m_100 import M2M100Config
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 import torch
@@ -25,7 +25,7 @@ def load_pretrained_state_dict(filename):
     pretrained_state_dict =  torch.load(filename)
     return {k.replace('model.',''):v for k,v in pretrained_state_dict.items()}
 
-tokenizer = AutoTokenizer.from_pretrained("facebook/m2m100_418M")
+tokenizer = AutoTokenizer.from_pretrained("facebook/m2m100_418M") # change
 print("Tokenizer loaded")
 
 config = M2M100Config()
@@ -33,7 +33,7 @@ model = M2M100Model(config)
 print("Model created", len(model.state_dict()))
 
 #trained_model = AutoModelForSeq2SeqLM.from_pretrained("facebook/m2m100_418M")
-pretrained_state_dict = load_pretrained_state_dict('model/m2m100_418M/pytorch_model.bin')
+pretrained_state_dict = load_pretrained_state_dict('/home/bscuser/Documents/m2m100_418M/pytorch_model.bin') # change
 print("Pretrained model loaded", len(pretrained_state_dict))
 print_mismatched_state_dict_keys(model.state_dict(),pretrained_state_dict)
 

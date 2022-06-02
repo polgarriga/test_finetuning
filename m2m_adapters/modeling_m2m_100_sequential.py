@@ -350,6 +350,7 @@ class M2M100EncoderLayer(nn.Module):
     def __init__(self, config: M2M100Config):
         super().__init__()
         self.embed_dim = config.d_model
+
         self.self_attn = M2M100Attention(
             embed_dim=self.embed_dim,
             num_heads=config.encoder_attention_heads,
@@ -362,6 +363,8 @@ class M2M100EncoderLayer(nn.Module):
         self.fc1 = nn.Linear(self.embed_dim, config.encoder_ffn_dim)
         self.fc2 = nn.Linear(config.encoder_ffn_dim, self.embed_dim)
         self.final_layer_norm = nn.LayerNorm(self.embed_dim)
+        self.adapter_scaling = config.adapter_scaling
+        self.adapter = Adapter(config)
 
     def forward(
         self,
@@ -382,7 +385,9 @@ class M2M100EncoderLayer(nn.Module):
                 returned tensors for more detail.
         """
         residual = hidden_states
+        adapter_hidden_states = self.adapter(hidden_states) * self.adapter_scaling
         hidden_states = self.self_attn_layer_norm(hidden_states)
+        
         hidden_states, attn_weights, _ = self.self_attn(
             hidden_states=hidden_states,
             attention_mask=attention_mask,
@@ -398,7 +403,7 @@ class M2M100EncoderLayer(nn.Module):
         hidden_states = nn.functional.dropout(hidden_states, p=self.activation_dropout, training=self.training)
         hidden_states = self.fc2(hidden_states)
         hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
-        hidden_states = residual + hidden_states
+        hidden_states = residual + hidden_states + adapter_hidden_states
 
         if hidden_states.dtype == torch.float16 and (
             torch.isinf(hidden_states).any() or torch.isnan(hidden_states).any()
@@ -429,6 +434,7 @@ class M2M100DecoderLayer(nn.Module):
         self.dropout = config.dropout
         self.activation_fn = ACT2FN[config.activation_function]
         self.activation_dropout = config.activation_dropout
+        self.adapter_scaling = config.adapter_scaling
 
         self.self_attn_layer_norm = nn.LayerNorm(self.embed_dim)
         self.encoder_attn = M2M100Attention(
@@ -440,7 +446,8 @@ class M2M100DecoderLayer(nn.Module):
         self.encoder_attn_layer_norm = nn.LayerNorm(self.embed_dim)
         self.fc1 = nn.Linear(self.embed_dim, config.decoder_ffn_dim)
         self.fc2 = nn.Linear(config.decoder_ffn_dim, self.embed_dim)
-        self.adapter = Adapter(config)
+        self.selfattn_adapter = Adapter(config)
+        self.cross_adapter = Adapter(config)
         self.final_layer_norm = nn.LayerNorm(self.embed_dim)
 
     def forward(
@@ -474,6 +481,7 @@ class M2M100DecoderLayer(nn.Module):
                 returned tensors for more detail.
         """
         residual = hidden_states
+        selfattn_adapter_hidden_states = self.selfattn_adapter(hidden_states) * self.adapter_scaling
         hidden_states = self.self_attn_layer_norm(hidden_states)
 
         # Self Attention
@@ -488,7 +496,9 @@ class M2M100DecoderLayer(nn.Module):
             output_attentions=output_attentions,
         )
         hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
-        hidden_states = residual + hidden_states
+        hidden_states = residual + hidden_states + selfattn_adapter_hidden_states
+
+        cross_adapter_hidden_states = self.cross_adapter(hidden_states) * self.adapter_scaling
 
         # Cross-Attention Block
         cross_attn_present_key_value = None
@@ -508,7 +518,7 @@ class M2M100DecoderLayer(nn.Module):
                 output_attentions=output_attentions,
             )
             hidden_states = nn.functional.dropout(hidden_states, p=self.dropout, training=self.training)
-            hidden_states = residual + hidden_states
+            hidden_states = residual + hidden_states + cross_adapter_hidden_states
 
             # add cross-attn to positions 3,4 of present_key_value tuple
             present_key_value = present_key_value + cross_attn_present_key_value

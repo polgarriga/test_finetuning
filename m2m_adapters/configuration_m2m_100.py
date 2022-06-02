@@ -128,6 +128,8 @@ class M2M100Config(PretrainedConfig):
         pad_token_id=1,
         bos_token_id=0,
         eos_token_id=2,
+        adapter_size=200,
+        adapter_scaling=4,
         **kwargs
     ):
         self.vocab_size = vocab_size
@@ -149,6 +151,8 @@ class M2M100Config(PretrainedConfig):
         self.use_cache = use_cache
         self.num_hidden_layers = encoder_layers
         self.scale_embedding = scale_embedding  # scale factor will be sqrt(d_model) if True
+        self.adapter_size = adapter_size
+        self.adapter_scaling = adapter_scaling
 
         super().__init__(
             pad_token_id=pad_token_id,
