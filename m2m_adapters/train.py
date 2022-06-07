@@ -1,7 +1,34 @@
-from modeling_m2m_100_parallel import M2M100Model
-from configuration_m2m_100 import M2M100Config
+from datasets import load_dataset, Dataset, DatasetDict, load_from_disk
+from modeling_m2m_100_parallel import M2M100AdapterForConditionalGeneration
+from configuration_m2m_100 import M2M100AdapterConfig
+from transformers import AutoTokenizer, AutoModel, DataCollatorForSeq2Seq
+from transformers import AutoModelForSeq2SeqLM, Seq2SeqTrainingArguments, Seq2SeqTrainer
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+from transformers import AutoConfig, AutoModel
+import numpy as np
+
 import torch
+
+def freeze_params(model):
+    #Freeze all parameters not in the adapters
+    trainable_parameters = []
+    for name, param in model.named_parameters():
+        if not "adapter" in name:
+            param.requires_grad = False
+        else:
+            print('Trainable param:', name)
+            trainable_parameters.append(param)
+    params = sum([np.prod(p.size()) for p in trainable_parameters])
+    print('Total number of trainable params:', params)
+    return model
+
+
+def dataframe_to_hf(df,src,tgt):
+    translations = []
+    for s,t in zip(df[src],df[tgt]):
+        translations.append({src:s,tgt:t})
+    return {'id':range(len(translations)), 'translation':translations}
+
 
 
 def print_mismatched_state_dict_keys(model_state_dict, pretrained_state_dict):
@@ -23,19 +50,71 @@ def print_mismatched_state_dict_keys(model_state_dict, pretrained_state_dict):
 
 def load_pretrained_state_dict(filename):
     pretrained_state_dict =  torch.load(filename)
-    return {k.replace('model.',''):v for k,v in pretrained_state_dict.items()}
+    #return {k.replace('model.',''):v for k,v in pretrained_state_dict.items()}
+    return pretrained_state_dict
 
-tokenizer = AutoTokenizer.from_pretrained("facebook/m2m100_418M") # change
-print("Tokenizer loaded")
 
-config = M2M100Config()
-model = M2M100Model(config)
+AutoConfig.register("M2M100_Adapter", M2M100AdapterConfig)
+AutoModelForSeq2SeqLM.register(M2M100AdapterConfig, M2M100AdapterForConditionalGeneration)
+
+config = M2M100AdapterConfig()
+model = AutoModelForSeq2SeqLM.from_config(config) 
+
 print("Model created", len(model.state_dict()))
 
-#trained_model = AutoModelForSeq2SeqLM.from_pretrained("facebook/m2m100_418M")
-pretrained_state_dict = load_pretrained_state_dict('/home/bscuser/Documents/m2m100_418M/pytorch_model.bin') # change
-print("Pretrained model loaded", len(pretrained_state_dict))
+
+DATASET_LOC = "data/ca-de"
+source_lang = "de"
+target_lang = "ca"
+
+
+print("Loading tokenizer")
+
+tokenizer = AutoTokenizer.from_pretrained("facebook/m2m100_418M", 
+                                            return_tensors="pt", 
+                                            src_lang=source_lang, 
+                                            tgt_lang=target_lang)
+
+
+print(f"Loading the dataset {DATASET_LOC}")
+
+tokenized_dataset = load_from_disk(DATASET_LOC)
+
+
+print("Loading pretrained")
+pretrained_state_dict = load_pretrained_state_dict('/home/bscuser/Documentos/m2m_adapters/model/m2m100_418M//pytorch_model.bin') # change
 print_mismatched_state_dict_keys(model.state_dict(),pretrained_state_dict)
 
+
+print("Loading pretrained weights")
 model.load_state_dict(pretrained_state_dict,strict=False)
-print("Pretrained weights loaded")
+model = freeze_params(model)
+
+data_collator = DataCollatorForSeq2Seq(tokenizer, model=model, padding=True)
+
+training_args = Seq2SeqTrainingArguments(
+    output_dir="./results",
+    evaluation_strategy="epoch",
+    learning_rate=2e-5,
+    per_device_train_batch_size=16,
+    per_device_eval_batch_size=16,
+    weight_decay=0.01,
+    save_total_limit=1,
+    num_train_epochs=1,
+    fp16=False,
+    save_strategy="epoch",
+    logging_strategy="epoch",
+)
+
+trainer = Seq2SeqTrainer(
+    model=model,
+    args=training_args,
+    train_dataset=tokenized_dataset["train"],
+    eval_dataset=tokenized_dataset["valid"],
+    tokenizer=tokenizer,
+    data_collator=data_collator,
+)
+
+print("Starting training...")
+
+trainer.train()

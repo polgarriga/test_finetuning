@@ -13,7 +13,7 @@ class Adapter(nn.Module):
         self.fc1 = nn.Linear(self.embed_dim, config.adapter_size)
         self.fc2 = nn.Linear(config.adapter_size, self.embed_dim)
        
-    def forward(self,x,encoder_padding_mask):
+    def forward(self,x):
         #Keep values for residual connection
         normalized = self.layer_norm(x)
         proj_down = self.relu(self.fc1(normalized))

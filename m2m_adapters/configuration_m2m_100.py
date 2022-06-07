@@ -31,7 +31,7 @@ M2M_100_PRETRAINED_CONFIG_ARCHIVE_MAP = {
 }
 
 
-class M2M100Config(PretrainedConfig):
+class M2M100AdapterConfig(PretrainedConfig):
     r"""
     This is the configuration class to store the configuration of a [`M2M100Model`]. It is used to instantiate an
     M2M100 model according to the specified arguments, defining the model architecture. Instantiating a configuration
@@ -99,7 +99,7 @@ class M2M100Config(PretrainedConfig):
     >>> # Accessing the model configuration
     >>> configuration = model.config
     ```"""
-    model_type = "m2m_100"
+    model_type = "M2M100_Adapter"
     keys_to_ignore_at_inference = ["past_key_values"]
     attribute_map = {"num_attention_heads": "encoder_attention_heads", "hidden_size": "d_model"}
 

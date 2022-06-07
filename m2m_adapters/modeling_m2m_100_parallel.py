@@ -43,12 +43,12 @@ from transformers.utils import (
     logging,
     replace_return_docstrings,
 )
-from configuration_m2m_100 import M2M100Config
+from configuration_m2m_100 import M2M100AdapterConfig
 
 
 logger = logging.get_logger(__name__)
 
-_CONFIG_FOR_DOC = "M2M100Config"
+_CONFIG_FOR_DOC = "M2M100AdapterConfig"
 _TOKENIZER_FOR_DOC = "M2M100Tokenizer"
 _CHECKPOINT_FOR_DOC = "facebook/m2m100_418M"
 
@@ -348,7 +348,7 @@ class M2M100Attention(nn.Module):
 
 # Copied from transformers.models.mbart.modeling_mbart.MBartEncoderLayer with MBart->M2M100
 class M2M100EncoderLayer(nn.Module):
-    def __init__(self, config: M2M100Config):
+    def __init__(self, config: M2M100AdapterConfig):
         super().__init__()
         self.embed_dim = config.d_model
 
@@ -422,7 +422,7 @@ class M2M100EncoderLayer(nn.Module):
 
 # Copied from transformers.models.mbart.modeling_mbart.MBartDecoderLayer with MBart->M2M100
 class M2M100DecoderLayer(nn.Module):
-    def __init__(self, config: M2M100Config):
+    def __init__(self, config: M2M100AdapterConfig):
         super().__init__()
         self.embed_dim = config.d_model
 
@@ -545,7 +545,7 @@ class M2M100DecoderLayer(nn.Module):
 
 
 class M2M100PreTrainedModel(PreTrainedModel):
-    config_class = M2M100Config
+    config_class = M2M100AdapterConfig
     base_model_prefix = "model"
     supports_gradient_checkpointing = True
 
@@ -699,7 +699,7 @@ class M2M100Encoder(M2M100PreTrainedModel):
         embed_tokens (nn.Embedding): output embedding
     """
 
-    def __init__(self, config: M2M100Config, embed_tokens: Optional[nn.Embedding] = None):
+    def __init__(self, config: M2M100AdapterConfig, embed_tokens: Optional[nn.Embedding] = None):
         super().__init__(config)
 
         self.dropout = config.dropout
@@ -877,7 +877,7 @@ class M2M100Decoder(M2M100PreTrainedModel):
         embed_tokens (nn.Embedding): output embedding
     """
 
-    def __init__(self, config: M2M100Config, embed_tokens: Optional[nn.Embedding] = None):
+    def __init__(self, config: M2M100AdapterConfig, embed_tokens: Optional[nn.Embedding] = None):
         super().__init__(config)
         self.dropout = config.dropout
         self.layerdrop = config.decoder_layerdrop
@@ -1142,7 +1142,7 @@ class M2M100Decoder(M2M100PreTrainedModel):
     M2M_100_START_DOCSTRING,
 )
 class M2M100Model(M2M100PreTrainedModel):
-    def __init__(self, config: M2M100Config):
+    def __init__(self, config: M2M100AdapterConfig):
         super().__init__(config)
 
         padding_idx, vocab_size = config.pad_token_id, config.vocab_size
@@ -1252,7 +1252,7 @@ class M2M100Model(M2M100PreTrainedModel):
 @add_start_docstrings(
     "The M2M100 Model with a language modeling head. Can be used for summarization.", M2M_100_START_DOCSTRING
 )
-class M2M100ForConditionalGeneration(M2M100PreTrainedModel):
+class M2M100AdapterForConditionalGeneration(M2M100PreTrainedModel):
     base_model_prefix = "model"
     _keys_to_ignore_on_load_missing = [
         r"encoder\.version",
@@ -1266,7 +1266,7 @@ class M2M100ForConditionalGeneration(M2M100PreTrainedModel):
         r"model.decoder.embed_positions.weights",
     ]
 
-    def __init__(self, config: M2M100Config):
+    def __init__(self, config: M2M100AdapterConfig):
         super().__init__(config)
         self.model = M2M100Model(config)
         self.lm_head = nn.Linear(config.d_model, self.model.shared.num_embeddings, bias=False)
