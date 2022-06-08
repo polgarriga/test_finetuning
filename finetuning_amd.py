@@ -2,7 +2,8 @@ from datasets import load_from_disk
 from transformers import AutoTokenizer, AutoModel, DataCollatorForSeq2Seq
 from transformers import AutoModelForSeq2SeqLM, Seq2SeqTrainingArguments, Seq2SeqTrainer
 
-CHECKPOINT = "/gpfs/projects/bsc88/huggingface/models/m2m100_418M"
+#CHECKPOINT = "/gpfs/projects/bsc88/huggingface/models/m2m100_418M"
+CHECKPOINT =  "facebook/m2m100_418M"
 DATASET_LOC = "data/ca-de"
 source_lang = "de"
 target_lang = "ca"
