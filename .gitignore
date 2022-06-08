@@ -4,4 +4,4 @@ m2m_adapters/data/*
 data/
 results/
 runs/
-
+slurm_logs/
